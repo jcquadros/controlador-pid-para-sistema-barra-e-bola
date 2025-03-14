@@ -44,7 +44,7 @@ void setup() {
 
   // Condiguracao do servo
   myservo.setPeriodHertz(50);    // standard 50 hz servo
-	myservo.attach(pinServo, 500, 2400);
+  myservo.attach(pinServo, 500, 2400);
   myservo.write(125);
 
   // Configuração do sensor ultrassônico
@@ -84,11 +84,7 @@ void loop() {
     // Limita o valor do PID dentro do intervalo desejado
     if (PID < 60) { PID = 60; }
     if (PID > 120) { PID = 120; }
-
-// Aplica o valor ao servo
-myservo.write(PID);
-
-
+	  
     // Aplica o valor ao servo
     myservo.write(PID);
     Serial.println(PID);

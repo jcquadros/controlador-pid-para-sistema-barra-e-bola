@@ -2,7 +2,7 @@
 #include <LiquidCrystal.h>
 
 #define NUM_SAMPLES 4  // Número de amostras para média móvel
-#define MAX_VARIATION 40  // Variação máxima aceitável entre leituras consecutivas (cm)
+#define MAX_VARIATION 30  // Variação máxima aceitável entre leituras consecutivas (cm)
 #define SERVO_PIN 14  // Pino PWM do Servo
 #define TRIG_PIN 26   // Trigger do sensor ultrassônico
 #define ECHO_PIN 27   // Echo do sensor ultrassônico (usar divisor de tensão)
@@ -17,11 +17,11 @@ LiquidCrystal lcd(19, 23, 18, 17, 16, 15);
 
 // Variáveis do controlador PID
 double P,I,D;
-double setpoint = 20.0;  
+double setpoint = 22.0;  
 double PID;
-double Kp = 10;
+double Kp = 10; // 25
 double Ki = 3;
-double Kd = 15;
+double Kd = 15; // 22
 double lastError = 0;
 double timeNow = 0;
 double lastTime = 0;
@@ -109,7 +109,7 @@ void updateEncoder() {
 
 void printValues(float kp, float kd, float ki) {
   char buffer1[16], buffer2[16];
-  snprintf(buffer1, sizeof(buffer1), "Kp=%.2f Kd=%.2f", kp, kd);
+  snprintf(buffer1, sizeof(buffer1), "Kp=%.1f Kd=%.1f", kp, kd);
   snprintf(buffer2, sizeof(buffer2), "Ki=%.2f", ki);
   
   lcd.setCursor(0, 0);

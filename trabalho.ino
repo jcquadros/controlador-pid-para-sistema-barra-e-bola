@@ -17,16 +17,16 @@ LiquidCrystal lcd(19, 23, 18, 17, 16, 15);
 
 // Variáveis do controlador PID
 double P,I,D;
-double setpoint = 19.0;  
+double setpoint = 20.0;  
 double PID;
-double Kp = 2;
-double Ki = 0.01;
-double Kd = 2.0;
+double Kp = 10;
+double Ki = 3;
+double Kd = 15;
 double lastError = 0;
 double timeNow = 0;
 double lastTime = 0;
 const int period = 100;
-double integral;
+double integral=0;
 // Configuração do Encoder
 volatile double encoderValue = 0;  // Variável para armazenar o valor do encoder
 int lastEncoded = 0;            // Variável para armazenar o estado anterior do encoder
@@ -67,7 +67,9 @@ void loop() {
     double vel = (error - lastError) / (period / 1000.0);
     // Cálculo do PID
     P = Kp * error;
-    I = (abs(error)>1 && abs(error)<5) ? I + (Ki * error) : 0;
+    //I = (abs(error)>1 && abs(error)<5) ? I + (Ki * error) : 0;
+    integral += error * (period / 1000.0);  // Integral acumulada (convertida para segundos)
+    I = Ki * integral;
     D = Kd * vel;  // Derivativo
     lastError = error;
 
@@ -76,8 +78,8 @@ void loop() {
 
     // Escreve no servo com precisão em microsegundos
     Serial.print("PID: ");
-    Serial.print(PID +1500);
-    PID = constrain(PID + 1500, 1300, 1600); // limita entre 1300 e 1600 microsegundos
+    Serial.print(PID*0.2 +1480);
+    PID = constrain(PID*0.2 + 1485, 1300, 1600); // limita entre 1300 e 1600 microsegundos
     
     myServo.writeMicroseconds(PID);
 

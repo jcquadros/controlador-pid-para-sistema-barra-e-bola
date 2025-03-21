@@ -1,35 +1,32 @@
 #include <ESP32Servo.h> // Biblioteca compatível com ESP32 baixar na 
 #include <LiquidCrystal.h>
-#include <Ultrasonic.h>
 
-#define pinServo 14  // Pino PWM do Servo
-#define trigPin 26   // Trigger do sensor ultrassônico
-#define echoPin 27   // Echo do sensor ultrassônico (usar divisor de tensão)
-#define encoderPinA  32  // Pino A do encoder
-#define encoderPinB  33  // Pino B do encoder
-#define buttonPin  25    // Pino do botão do encoder (sw)
-
-// Sensor
-HC_SR04 sensor1(26,27);
-
+#define NUM_SAMPLES 4  // Número de amostras para média móvel
+#define MAX_VARIATION 40  // Variação máxima aceitável entre leituras consecutivas (cm)
+#define SERVO_PIN 14  // Pino PWM do Servo
+#define TRIG_PIN 26   // Trigger do sensor ultrassônico
+#define ECHO_PIN 27   // Echo do sensor ultrassônico (usar divisor de tensão)
+#define ENCODER_PIN_A  32  // Pino A do encoder
+#define ENCODER_PIN_B  33  // Pino B do encoder
+#define BUTTON_PIN  25    // Pino do botão do encoder (sw)
 // Servo
-Servo myservo;
+Servo myServo;
 
 // LCD
 LiquidCrystal lcd(19, 23, 18, 17, 16, 15);
 
 // Variáveis do controlador PID
-double setpoint = 20.0;  
+double P,I,D;
+double setpoint = 19.0;  
 double PID;
-double Kp = 3.5;
-double Ki = 0.2;
+double Kp = 2;
+double Ki = 0.01;
 double Kd = 2.0;
 double lastError = 0;
 double timeNow = 0;
 double lastTime = 0;
-int period = 50;
+const int period = 100;
 double integral;
-
 // Configuração do Encoder
 volatile double encoderValue = 0;  // Variável para armazenar o valor do encoder
 int lastEncoded = 0;            // Variável para armazenar o estado anterior do encoder
@@ -43,60 +40,60 @@ void setup() {
   lcd.begin(16, 2);
 
   // Condiguracao do servo
-  myservo.setPeriodHertz(50);    // standard 50 hz servo
-  myservo.attach(pinServo, 500, 2400);
-  myservo.write(125);
+	myServo.attach(SERVO_PIN);
 
   // Configuração do sensor ultrassônico
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
 
   // Configuração do Encoder
-  pinMode(encoderPinA, INPUT_PULLUP);
-  pinMode(encoderPinB, INPUT_PULLUP);
-  pinMode(buttonPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(encoderPinA), updateEncoder, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(encoderPinB), updateEncoder, CHANGE);
-
+  pinMode(ENCODER_PIN_A, INPUT_PULLUP);
+  pinMode(ENCODER_PIN_B, INPUT_PULLUP);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A), updateEncoder, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B), updateEncoder, CHANGE);
+  
   lastTime = timeNow = millis();  // Inicia o tempo do PID
 }
 
 void loop() {
   if (millis() > timeNow + period){
     timeNow = millis();
-    float distance = sensor1.distance();
-    //Serial.println(distance);
+    float distance = filteredDistance();
     updatePIDValues();
   
     // Cálculo do erro
     double error = setpoint - distance;
-    
-    // Cálculo PID
-    double P = Kp * error;
-    double I = (-3 < error && error < 3) ? I + (Ki * error): 0;
-    double D = Kd * ((error - lastError) / period);
+    double vel = (error - lastError) / (period / 1000.0);
+    // Cálculo do PID
+    P = Kp * error;
+    I = (abs(error)>1 && abs(error)<5) ? I + (Ki * error) : 0;
+    D = Kd * vel;  // Derivativo
     lastError = error;
+
     PID = P + I + D;
+    //int servoPulse = map(angle, 0, 45, SERVO_MIN_US, SERVO_MAX_US);
 
-    // Mapeia o valor do PID para um intervalo de aproximadamente 60 graus
-    PID = map(PID, -150, 150, 60, 120); // Ajustado para permitir 60° de rotação
+    // Escreve no servo com precisão em microsegundos
+    Serial.print("PID: ");
+    Serial.print(PID +1500);
+    PID = constrain(PID + 1500, 1300, 1600); // limita entre 1300 e 1600 microsegundos
+    
+    myServo.writeMicroseconds(PID);
 
-    // Limita o valor do PID dentro do intervalo desejado
-    if (PID < 60) { PID = 60; }
-    if (PID > 120) { PID = 120; }
-	  
-    // Aplica o valor ao servo
-    myservo.write(PID);
-    Serial.println(PID);
-  
+    Serial.print(" | I: ");
+    Serial.print(I);
+    Serial.print(" | Dist: ");
+    Serial.println(distance);
+
     printValues(Kp, Kd, Ki);
   }
 }
 
 // Função de interrupção para atualizar o valor do encoder
 void updateEncoder() {
-  int MSB = digitalRead(encoderPinA);  // Lê o pino A
-  int LSB = digitalRead(encoderPinB);  // Lê o pino B
+  int MSB = digitalRead(ENCODER_PIN_A);  // Lê o pino A
+  int LSB = digitalRead(ENCODER_PIN_B);  // Lê o pino B
 
   int encoded = (MSB << 1) | LSB;  // Combina os dois pinos em um número
   int sum = (lastEncoded << 2) | encoded;  // Combina o estado anterior e atual
@@ -108,9 +105,9 @@ void updateEncoder() {
   lastChangeTime = millis();  // Atualiza o tempo da última mudança
 }
 
-void printValues(float k, float kp, float ki) {
+void printValues(float kp, float kd, float ki) {
   char buffer1[16], buffer2[16];
-  snprintf(buffer1, sizeof(buffer1), "K=%.2f Kp=%.2f", k, kp);
+  snprintf(buffer1, sizeof(buffer1), "Kp=%.2f Kd=%.2f", kp, kd);
   snprintf(buffer2, sizeof(buffer2), "Ki=%.2f", ki);
   
   lcd.setCursor(0, 0);
@@ -120,7 +117,7 @@ void printValues(float k, float kp, float ki) {
 }
 
 void updatePIDValues() {
-  bool currentButtonState = digitalRead(buttonPin);
+  bool currentButtonState = digitalRead(BUTTON_PIN);
   // Verifica se o botão do encoder foi pressionado
   if (cont == 150) {
     if (currentButtonState == LOW && lastButtonState == HIGH) {
@@ -134,13 +131,53 @@ void updatePIDValues() {
 
   // Atualizando valores de K em uma escala diferente pra cada um
   if (sw_k == 0) {
-    Kp = constrain(Kp + encoderValue * 0.1, 0.5, 10.0);
+    Kp = constrain(Kp + encoderValue * 1.0, 0, 100);
   } else if (sw_k == 1) {
-    Kd = constrain(Kd + encoderValue * 0.01, 0.001, 2.0);
+    Kd = constrain(Kd + encoderValue * 1.0, 0, 100);
   } else {
-    Ki = constrain(Ki + encoderValue * 0.05, 0.01, 5.0);
+    Ki = constrain(Ki + encoderValue * 0.01, 0.00, 5.0);
   }
 
   // Reseta o valor do encoder após cada leitura
   encoderValue = 0;
+}
+
+float filteredDistance() {
+  static float readings[NUM_SAMPLES] = {0};  // Buffer de leituras
+  static int index = 0;
+  static float lastValid = 20;  // Última distância válida (inicialmente 20 cm)
+  float newReading = 0;
+  
+  do {
+   newReading = getDistance();  // Obtém nova leitura do sensor
+  } while(newReading > 50 || newReading < 0);
+
+  // Descartar leituras anômalas (muito diferentes da última válida)
+  if (abs(newReading - lastValid) > MAX_VARIATION) {
+    return lastValid;  // Mantém a última leitura válida
+  }
+
+  // Atualiza buffer circular
+  readings[index] = newReading;
+  index = (index + 1) % NUM_SAMPLES;
+
+  // Calcula a média das leituras armazenadas
+  float sum = 0;
+  for (int i = 0; i < NUM_SAMPLES; i++) {
+    sum += readings[i];
+  }
+  lastValid = sum / float(NUM_SAMPLES);  // Atualiza última leitura válida
+
+  return int(lastValid);
+}
+
+
+float getDistance(){
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  return int(pulseIn(ECHO_PIN, HIGH) * 0.01715); 
 }

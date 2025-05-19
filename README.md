@@ -1,5 +1,7 @@
 # Equilíbrio da Bolinha com ESP32
 
+![Imagem do projeto](imagem_do_projeto.jpg)
+
 Este projeto utiliza um ESP32 para controlar um sistema de equilíbrio de uma bolinha em uma plataforma. O controle é realizado por um servo motor, um sensor ultrassônico e um encoder rotativo, utilizando um controlador PID para ajustar a posição da plataforma conforme a distância medida.
 
 ## Funcionalidade do Sistema
@@ -14,6 +16,9 @@ O controlador PID (Proporcional, Integral e Derivativo) é utilizado para ajusta
 
 Os parâmetros podem ser ajustados durante a execução utilizando o encoder rotativo, permitindo um ajuste fino para melhor estabilidade.
 
+# Peças
+As partes 3d do projeto estão disponíveis ![neste link](https://grabcad.com/library/pid-ball-on-beam-balancer-1)
+
 ## Instalação e Configuração
 ### Requisitos
 - **Placa ESP32**
@@ -21,6 +26,7 @@ Os parâmetros podem ser ajustados durante a execução utilizando o encoder rot
 - **Sensor ultrassônico (HC-SR04 ou similar)**
 - **Encoder rotativo com botão**
 - **Display LCD 16x2 (opcional)**
+- **Bolinha de ping pong**
 
 ### Bibliotecas Necessárias
 Instale as seguintes bibliotecas na IDE Arduino:

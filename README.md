@@ -17,7 +17,7 @@ O controlador PID (Proporcional, Integral e Derivativo) é utilizado para ajusta
 Os parâmetros podem ser ajustados durante a execução utilizando o encoder rotativo, permitindo um ajuste fino para melhor estabilidade.
 
 # Peças
-As partes 3d do projeto estão disponíveis ![neste link](https://grabcad.com/library/pid-ball-on-beam-balancer-1)
+As partes 3d do projeto estão disponíveis [neste link](https://grabcad.com/library/pid-ball-on-beam-balancer-1)
 
 ## Instalação e Configuração
 ### Requisitos
